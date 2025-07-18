@@ -56,7 +56,7 @@ ax.legend()
 
 st.pyplot(fig)
 
-# Tampilkan parameter regresi
+# Parameter regresi
 st.markdown("### 📌 Parameter Regresi")
 st.write(f"- Slope (ε·l): {slope:.4f}")
 st.write(f"- Intersep: {intercept:.4f}")
@@ -74,22 +74,32 @@ cols = st.columns(min(6, num_samples))
 
 for i in range(num_samples):
     with cols[i % 6]:
-        abs_val = st.number_input(
-            f"Absorbansi S{i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}"
-        )
+        abs_text = st.text_input(f"Absorbansi S{i+1}", key=f"abs_input_{i}")
+        try:
+            abs_val = float(abs_text)
+            if not (0.0 <= abs_val <= 3.0):
+                st.warning(f"Absorbansi S{i+1} harus antara 0.0 - 3.0")
+                abs_val = 0.0
+        except:
+            abs_val = 0.0
+
         conc_val = (abs_val - intercept) / slope if slope != 0 else 0
         conc_val = max(conc_val, 0)
         st.metric(label=f"Konsentrasi S{i+1}", value=f"{conc_val:.3f} ppm")
         sample_results.append({
             "Sampel": f"S{i+1}",
-            "Absorbansi": f"{abs_val:.4f}",
-            "Konsentrasi (ppm)": f"{conc_val:.3f}"
+            "Absorbansi": abs_val,
+            "Konsentrasi (ppm)": conc_val
         })
 
-# Tampilkan tabel hasil
+# Tabel hasil
 if sample_results:
     st.markdown("#### 📋 Tabel Hasil:")
-    st.table(pd.DataFrame(sample_results))
+    res_df = pd.DataFrame(sample_results)
+    st.dataframe(res_df.style.format({
+        "Absorbansi": "%.4f",
+        "Konsentrasi (ppm)": "%.3f"
+    }), hide_index=True)
 
     # %RPD
     if num_samples >= 2 and num_samples % 2 == 0:
@@ -97,16 +107,17 @@ if sample_results:
         rpd_results = []
         rpd_values = []
         for i in range(0, num_samples, 2):
-            c1 = float(sample_results[i]["Konsentrasi (ppm)"])
-            c2 = float(sample_results[i+1]["Konsentrasi (ppm)"])
+            c1 = sample_results[i]["Konsentrasi (ppm)"]
+            c2 = sample_results[i+1]["Konsentrasi (ppm)"]
             avg = (c1 + c2) / 2
             rpd = abs(c1 - c2) / avg * 100 if avg != 0 else 0
             rpd_values.append(rpd)
             rpd_results.append({
                 "Pasangan": f"S{i+1} & S{i+2}",
-                "%RPD": f"{rpd:.2f}"
+                "%RPD": rpd
             })
-        st.table(pd.DataFrame(rpd_results))
+        rpd_df = pd.DataFrame(rpd_results)
+        st.dataframe(rpd_df.style.format({"%RPD": "%.2f"}), hide_index=True)
         avg_rpd = np.mean(rpd_values)
         st.markdown(f"📌 *Nilai Akurasi (%RPD rata-rata): {avg_rpd:.2f}%*")
 
@@ -116,7 +127,7 @@ if sample_results:
     horwitz_values = []
 
     for s in sample_results:
-        ppm = float(s["Konsentrasi (ppm)"])
+        ppm = s["Konsentrasi (ppm)"]
         C_decimal = ppm / 1_000_000
         if C_decimal > 0:
             cv_horwitz = 2 ** (1 - 0.5 * np.log10(C_decimal)) * 100
@@ -125,11 +136,15 @@ if sample_results:
             cv_horwitz = np.nan
         horwitz_results.append({
             "Sampel": s["Sampel"],
-            "Konsentrasi (ppm)": f"{ppm:.3f}",
-            "CV Horwitz (%)": f"{cv_horwitz:.2f}" if not np.isnan(cv_horwitz) else "NaN"
+            "Konsentrasi (ppm)": ppm,
+            "CV Horwitz (%)": cv_horwitz
         })
 
-    st.table(pd.DataFrame(horwitz_results))
+    cv_df = pd.DataFrame(horwitz_results)
+    st.dataframe(cv_df.style.format({
+        "Konsentrasi (ppm)": "%.3f",
+        "CV Horwitz (%)": "%.2f"
+    }), hide_index=True)
 
     horwitz_values_clean = [v for v in horwitz_values if not np.isnan(v)]
     if horwitz_values_clean:
