@@ -4,134 +4,80 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
+# Konfigurasi halaman
 st.set_page_config(page_title="Spektrofotometri Sederhana", layout="wide")
 st.title("📊 Analisis Spektrofotometri - Beer's Law")
 
-st.markdown("Masukkan minimal 6 data standar (konsentrasi dan absorbansi):")
+st.markdown("Masukkan minimal 3 data standar (konsentrasi dan absorbansi):")
 
 # Input data standar
-num_std = st.number_input("Jumlah data standar", min_value=6, max_value=20, value=6)
+num_std = st.number_input("Jumlah data standar:", min_value=3, max_value=10, value=3, step=1)
 std_data = []
 
 for i in range(num_std):
     col1, col2 = st.columns(2)
     with col1:
-        conc = st.number_input(f"Konsentrasi {i+1} (ppm)", key=f"c{i}", format="%.4f")
+        conc = st.number_input(f"Konsentrasi Standar {i+1} (ppm):", key=f"conc_{i}")
     with col2:
-        absb = st.number_input(f"Absorbansi {i+1}", key=f"a{i}", format="%.4f")
-    std_data.append((conc, absb))
+        absorb = st.number_input(f"Absorbansi Standar {i+1}:", key=f"abs_{i}")
+    std_data.append((conc, absorb))
 
-df = pd.DataFrame(std_data, columns=["Konsentrasi", "Absorbansi"])
+# Hitung regresi jika data lengkap
+if all(c > 0 and a > 0 for c, a in std_data):
+    concentrations, absorbances = zip(*std_data)
+    slope, intercept, r_value, _, _ = linregress(concentrations, absorbances)
 
-# Validasi input
-if df["Konsentrasi"].isnull().any() or df["Absorbansi"].isnull().any():
-    st.warning("Isi semua nilai terlebih dahulu.")
-    st.stop()
+    st.markdown("### 📈 Grafik Kalibrasi")
+    fig, ax = plt.subplots()
+    ax.scatter(concentrations, absorbances, color='blue', label='Data Standar')
+    x_vals = np.array(concentrations)
+    y_vals = slope * x_vals + intercept
+    ax.plot(x_vals, y_vals, color='red', label=f'y = {slope:.4f}x + {intercept:.4f}')
+    ax.set_xlabel("Konsentrasi (ppm)")
+    ax.set_ylabel("Absorbansi")
+    ax.legend()
+    st.pyplot(fig)
 
-if df["Konsentrasi"].nunique() < 2:
-    st.error("Minimal dua nilai konsentrasi harus berbeda untuk menghitung regresi linier.")
-    st.stop()
+    st.markdown(f"**Persamaan Regresi:** y = {slope:.4f}x + {intercept:.4f}")
+    st.markdown(f"**R² (Koefisien Determinasi):** {r_value**2:.4f}")
 
-# Hitung regresi linier
-slope, intercept, r_value, _, _ = linregress(df["Konsentrasi"], df["Absorbansi"])
-r_squared = r_value**2
+    # Input data sampel
+    st.markdown("---")
+    st.markdown("### 🧪 Data Sampel")
+    num_samples = st.number_input("Jumlah sampel:", min_value=1, max_value=10, value=2, step=1)
+    sample_results = []
 
-# Plot kurva kalibrasi
-fig, ax = plt.subplots()
-x_fit = np.linspace(0, df["Konsentrasi"].max()*1.1, 100)
-y_fit = slope * x_fit + intercept
-
-ax.scatter(df["Konsentrasi"], df["Absorbansi"], label="Data Standar", color="blue")
-ax.plot(x_fit, y_fit, color="red", linestyle="--", label=f"y = {slope:.3f}x + {intercept:.3f}")
-ax.set_xlabel("Konsentrasi (ppm)")
-ax.set_ylabel("Absorbansi")
-ax.set_title("Kurva Kalibrasi")
-ax.grid(True)
-ax.legend()
-
-st.pyplot(fig)
-
-# Tampilkan parameter regresi
-st.markdown("### 📌 Parameter Regresi")
-st.write(f"- Slope (ε·l): **{slope:.4f}**")
-st.write(f"- Intersep: **{intercept:.4f}**")
-st.write(f"- Koefisien Korelasi (r): **{r_value:.4f}**")
-st.write(f"- R-squared: **{r_squared:.4f}**")
-
-# Input sampel
-st.markdown("---")
-st.markdown("### 🧪 Hitung Konsentrasi Sampel")
-num_samples = st.number_input("Jumlah sampel", min_value=1, max_value=10, value=6)
-
-sample_results = []
-st.markdown("#### Hasil Perhitungan Konsentrasi:")
-
-cols = st.columns(min(6, num_samples))  # Maks. 6 kolom per baris
-
-for i in range(num_samples):
-    with cols[i % 6]:
-        abs_val = st.number_input(
-            f"Absorbansi S{i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}"
-        )
-        conc_val = (abs_val - intercept) / slope if slope != 0 else 0
-        conc_val = max(conc_val, 0)
-        st.metric(label=f"Konsentrasi S{i+1}", value=f"{conc_val:.3f} ppm")
+    for i in range(num_samples):
+        absorb = st.number_input(f"Absorbansi Sampel S{i+1}:", key=f"samp_abs_{i}")
+        concentration = (absorb - intercept) / slope if slope != 0 else 0
         sample_results.append({
             "Sampel": f"S{i+1}",
-            "Absorbansi": abs_val,
-            "Konsentrasi (ppm)": conc_val
+            "Absorbansi": absorb,
+            "Konsentrasi (ppm)": concentration
         })
+        st.write(f"**S{i+1} → Konsentrasi: {concentration:.3f} ppm**")
 
-# Tampilkan tabel hasil
-if sample_results:
-    st.markdown("#### 📋 Tabel Hasil:")
-    res_df = pd.DataFrame(sample_results)
-    st.dataframe(res_df.style.format({
-        "Absorbansi": "%.4f",
-        "Konsentrasi (ppm)": "%.3f"
-    }), hide_index=True)
-
-    # =========================
-    # 🔸 %RPD (akurasi duplikat)
-    # =========================
+    # Evaluasi Akurasi (%RPD) jika ada pasangan duplikat
     if num_samples >= 2 and num_samples % 2 == 0:
-        st.markdown("#### 🎯 Evaluasi Akurasi (%RPD untuk Duplikat)")
-
-        rpd_results = []
+        st.markdown("### 🎯 Evaluasi Akurasi (%RPD)")
         for i in range(0, num_samples, 2):
             c1 = sample_results[i]["Konsentrasi (ppm)"]
             c2 = sample_results[i+1]["Konsentrasi (ppm)"]
             avg = (c1 + c2) / 2
             rpd = abs(c1 - c2) / avg * 100 if avg != 0 else 0
-            rpd_results.append({
-                "Pasangan": f"S{i+1} & S{i+2}",
-                "%RPD": rpd
-            })
+            status = "✅ Akurasi Baik" if rpd <= 10 else "❌ Akurasi Buruk"
+            st.write(f"Pasangan S{i+1} & S{i+2}: %RPD = {rpd:.2f}% — {status}")
 
-        rpd_df = pd.DataFrame(rpd_results)
-        st.dataframe(rpd_df.style.format({"%RPD": "%.2f"}), hide_index=True)
-
-    # =========================
-    # 🔸 CV Horwitz (presisi)
-    # =========================
-    st.markdown("#### 📉 Evaluasi Presisi (CV Horwitz)")
-    horwitz_results = []
-
+    # Evaluasi Presisi (CV Horwitz)
+    st.markdown("### 📉 Evaluasi Presisi (CV Horwitz)")
     for s in sample_results:
         ppm = s["Konsentrasi (ppm)"]
         C_decimal = ppm / 1_000_000  # ppm ke proporsi
         if C_decimal > 0:
             cv_horwitz = 2 ** (1 - 0.5 * np.log10(C_decimal)) * 100
+            status = "✅ Presisi Baik" if cv_horwitz <= 22 else "❌ Presisi Buruk"
+            st.write(f"{s['Sampel']}: CV Horwitz = {cv_horwitz:.2f}% — {status}")
         else:
-            cv_horwitz = np.nan
-        horwitz_results.append({
-            "Sampel": s["Sampel"],
-            "Konsentrasi (ppm)": ppm,
-            "CV Horwitz (%)": cv_horwitz
-        })
-
-    cv_df = pd.DataFrame(horwitz_results)
-    st.dataframe(cv_df.style.format({
-        "Konsentrasi (ppm)": "%.3f",
-        "CV Horwitz (%)": "%.2f"
-    }), hide_index=True)
+            st.write(f"{s['Sampel']}: CV Horwitz tidak dapat dihitung (konsentrasi = 0)")
+else:
+    st.warning("Mohon isi semua data standar dengan benar (tidak boleh nol).")
