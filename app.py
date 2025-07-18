@@ -7,10 +7,10 @@ from scipy.stats import linregress
 st.set_page_config(page_title="Spektrofotometri Sederhana", layout="wide")
 st.title("📊 Analisis Spektrofotometri - Beer's Law")
 
-st.markdown("Masukkan minimal 6 data standar (konsentrasi dan absorbansi):")
+st.markdown("Masukkan minimal 3 data standar (konsentrasi dan absorbansi):")
 
 # Input data standar
-num_std = st.number_input("Jumlah data standar", min_value=6, max_value=20, value=6)
+num_std = st.number_input("Jumlah data standar", min_value=3, max_value=20, value=6)
 std_data = []
 
 for i in range(num_std):
@@ -53,10 +53,10 @@ st.pyplot(fig)
 
 # Tampilkan parameter regresi
 st.markdown("### 📌 Parameter Regresi")
-st.write(f"- Slope (ε·l): {slope:.4f}")
-st.write(f"- Intersep: {intercept:.4f}")
-st.write(f"- Koefisien Korelasi (r): {r_value:.4f}")
-st.write(f"- R-squared: {r_squared:.4f}")
+st.write(f"- Slope (ε·l): `{slope:.4f}`")
+st.write(f"- Intersep: `{intercept:.4f}`")
+st.write(f"- Koefisien Korelasi (r): `{r_value:.4f}`")
+st.write(f"- R-squared: `{r_squared:.4f}`")
 
 # Input sampel
 st.markdown("---")
@@ -110,42 +110,30 @@ if sample_results:
                 "%RPD": rpd
             })
 
-        rpd_df = pd.DataFrame(rpd_results)
-        st.dataframe(rpd_df.style.format({"%RPD": "%.2f"}), hide_index=True)
+        # Tampilkan semua hasil %RPD langsung
+        for r in rpd_results:
+            st.markdown(f"- Pasangan {r['Pasangan']}: **{r['%RPD']:.2f}%**")
 
-        # Tampilkan nilai rata-rata %RPD
         avg_rpd = np.mean(rpd_values)
-        st.markdown(f"📌 *Nilai Akurasi (%RPD rata-rata): {avg_rpd:.2f}%*")
+        st.markdown(f"📌 *Nilai Akurasi (%RPD rata-rata): **{avg_rpd:.2f}%***")
 
     # =========================
     # 🔸 CV Horwitz (presisi)
     # =========================
     st.markdown("#### 📉 Evaluasi Presisi (CV Horwitz)")
-    horwitz_results = []
-    horwitz_values = []
 
+    horwitz_values = []
     for s in sample_results:
         ppm = s["Konsentrasi (ppm)"]
-        C_decimal = ppm / 1_000_000  # ppm ke proporsi
+        C_decimal = ppm / 1_000_000
         if C_decimal > 0:
             cv_horwitz = 2 ** (1 - 0.5 * np.log10(C_decimal)) * 100
             horwitz_values.append(cv_horwitz)
+            st.markdown(f"- {s['Sampel']}: **{cv_horwitz:.2f}%**")
         else:
-            cv_horwitz = np.nan
-        horwitz_results.append({
-            "Sampel": s["Sampel"],
-            "Konsentrasi (ppm)": ppm,
-            "CV Horwitz (%)": cv_horwitz
-        })
+            st.markdown(f"- {s['Sampel']}: **Tidak valid (konsentrasi 0)**")
 
-    cv_df = pd.DataFrame(horwitz_results)
-    st.dataframe(cv_df.style.format({
-        "Konsentrasi (ppm)": "%.3f",
-        "CV Horwitz (%)": "%.2f"
-    }), hide_index=True)
-
-    # Tampilkan nilai rata-rata CV Horwitz
     horwitz_values_clean = [v for v in horwitz_values if not np.isnan(v)]
     if horwitz_values_clean:
         avg_cv_horwitz = np.mean(horwitz_values_clean)
-        st.markdown(f"📌 *Rata-rata CV Horwitz: {avg_cv_horwitz:.2f}%*")
+        st.markdown(f"📌 *Rata-rata CV Horwitz: **{avg_cv_horwitz:.2f}%***")
