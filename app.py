@@ -16,10 +16,15 @@ std_data = []
 for i in range(num_std):
     col1, col2 = st.columns(2)
     with col1:
-        conc = st.number_input(f"Konsentrasi {i+1} (ppm)", key=f"c{i}", format="%.4f")
+        conc_str = st.text_input(f"Konsentrasi {i+1} (ppm)", key=f"c{i}")
     with col2:
-        absb = st.number_input(f"Absorbansi {i+1}", key=f"a{i}", format="%.4f")
-    std_data.append((conc, absb))
+        absb_str = st.text_input(f"Absorbansi {i+1}", key=f"a{i}")
+    try:
+        conc = float(conc_str)
+        absb = float(absb_str)
+        std_data.append((conc, absb))
+    except:
+        std_data.append((None, None))
 
 df = pd.DataFrame(std_data, columns=["Konsentrasi", "Absorbansi"])
 
