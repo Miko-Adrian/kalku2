@@ -82,8 +82,3 @@ for i in range(num_samples):
             "Konsentrasi (ppm)": conc_val
         })
 
-# Tabel hasil
-if sample_results:
-    st.markdown("#### 📋 Tabel Hasil:")
-    res_df = pd.DataFrame(sample_results)
-    st.dataframe(res_df.style.format({"Absorbansi": "%.4f", "Konsentrasi (ppm)": "%.3f"}), hide_index=True)
