@@ -104,7 +104,7 @@ if sample_results:
 
     for s in sample_results:
         ppm = float(s["Konsentrasi (ppm)"])
-        C_decimal = ppm / 1_000_000
+        C_decimal = ppm / 1000000
         if C_decimal > 0:
             cv_horwitz = 2 ** (1 - 0.5 * np.log10(C_decimal)) * 100
             horwitz_values.append(cv_horwitz)
