@@ -51,24 +51,39 @@ ax.legend()
 
 st.pyplot(fig)
 
-# Tampilkan parameter
+# Tampilkan parameter regresi
 st.markdown("### 📌 Parameter Regresi")
 st.write(f"- Slope (ε·l): **{slope:.4f}**")
 st.write(f"- Intersep: **{intercept:.4f}**")
+st.write(f"- Koefisien Korelasi (r): **{r_value:.4f}**")
 st.write(f"- R-squared: **{r_squared:.4f}**")
 
 # Input absorbansi sampel
 st.markdown("---")
 st.markdown("### 🧪 Hitung Konsentrasi Sampel")
-num_samples = st.number_input("Jumlah sampel", min_value=1, max_value=10, value=2)
+num_samples = st.number_input("Jumlah sampel", min_value=1, max_value=10, value=6)
 
 sample_results = []
-for i in range(num_samples):
-    abs_val = st.number_input(f"Absorbansi Sampel {i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}")
-    conc_val = (abs_val - intercept) / slope if slope != 0 else 0
-    conc_val = max(conc_val, 0)
-    sample_results.append({"Sampel": f"S{i+1}", "Absorbansi": abs_val, "Konsentrasi (ppm)": conc_val})
+st.markdown("#### Hasil Perhitungan Konsentrasi:")
 
+cols = st.columns(min(6, num_samples))  # tampilkan hasil di baris horizontal hingga 6 kolom
+
+for i in range(num_samples):
+    with cols[i % 6]:  # tampilkan maksimum 6 per baris
+        abs_val = st.number_input(
+            f"Absorbansi S{i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}"
+        )
+        conc_val = (abs_val - intercept) / slope if slope != 0 else 0
+        conc_val = max(conc_val, 0)
+        st.metric(label=f"Konsentrasi S{i+1}", value=f"{conc_val:.3f} ppm")
+        sample_results.append({
+            "Sampel": f"S{i+1}",
+            "Absorbansi": abs_val,
+            "Konsentrasi (ppm)": conc_val
+        })
+
+# Tabel hasil
 if sample_results:
+    st.markdown("#### 📋 Tabel Hasil:")
     res_df = pd.DataFrame(sample_results)
     st.dataframe(res_df.style.format({"Absorbansi": "%.4f", "Konsentrasi (ppm)": "%.3f"}), hide_index=True)
