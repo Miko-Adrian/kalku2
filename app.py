@@ -7,10 +7,10 @@ from scipy.stats import linregress
 st.set_page_config(page_title="Spektrofotometri Sederhana", layout="wide")
 st.title("📊 Analisis Spektrofotometri - Beer's Law")
 
-st.markdown("Masukkan minimal 3 data standar (konsentrasi dan absorbansi):")
+st.markdown("Masukkan minimal 6 data standar (konsentrasi dan absorbansi):")
 
-# Input data standar
-num_std = st.number_input("Jumlah data standar", min_value=3, max_value=10, value=3)
+# Input data standar (min 6)
+num_std = st.number_input("Jumlah data standar", min_value=6, max_value=20, value=6)
 std_data = []
 
 for i in range(num_std):
@@ -23,14 +23,20 @@ for i in range(num_std):
 
 # Proses regresi
 df = pd.DataFrame(std_data, columns=["Konsentrasi", "Absorbansi"])
+
 if df["Konsentrasi"].isnull().any() or df["Absorbansi"].isnull().any():
     st.warning("Isi semua nilai terlebih dahulu.")
     st.stop()
 
+if df["Konsentrasi"].nunique() < 2:
+    st.error("Minimal dua nilai konsentrasi harus berbeda untuk menghitung regresi linier.")
+    st.stop()
+
+# Hitung regresi
 slope, intercept, r_value, _, _ = linregress(df["Konsentrasi"], df["Absorbansi"])
 r_squared = r_value**2
 
-# Tampilkan plot kalibrasi
+# Plot kalibrasi
 fig, ax = plt.subplots()
 x_fit = np.linspace(0, df["Konsentrasi"].max()*1.1, 100)
 y_fit = slope * x_fit + intercept
@@ -45,11 +51,11 @@ ax.legend()
 
 st.pyplot(fig)
 
-# Tampilkan parameter regresi
+# Tampilkan parameter
 st.markdown("### 📌 Parameter Regresi")
-st.write(f"- Slope (ε·l): *{slope:.4f}*")
-st.write(f"- Intersep: *{intercept:.4f}*")
-st.write(f"- R-squared: *{r_squared:.4f}*")
+st.write(f"- Slope (ε·l): **{slope:.4f}**")
+st.write(f"- Intersep: **{intercept:.4f}**")
+st.write(f"- R-squared: **{r_squared:.4f}**")
 
 # Input absorbansi sampel
 st.markdown("---")
