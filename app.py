@@ -36,9 +36,14 @@ if df["Konsentrasi"].nunique() < 2:
 slope, intercept, r_value, _, _ = linregress(df["Konsentrasi"], df["Absorbansi"])
 r_squared = r_value**2
 
+# Validasi slope
+if abs(slope) < 1e-6:
+    st.error("Slope terlalu kecil. Data mungkin tidak cukup bervariasi atau tidak linier.")
+    st.stop()
+
 # Plot kurva kalibrasi
 fig, ax = plt.subplots()
-x_fit = np.linspace(0, df["Konsentrasi"].max()*1.1, 100)
+x_fit = np.linspace(0, df["Konsentrasi"].max() * 1.1, 100)
 y_fit = slope * x_fit + intercept
 
 ax.scatter(df["Konsentrasi"], df["Absorbansi"], label="Data Standar", color="blue")
@@ -53,10 +58,10 @@ st.pyplot(fig)
 
 # Tampilkan parameter regresi
 st.markdown("### 📌 Parameter Regresi")
-st.write(f"- Slope (ε·l): `{slope:.4f}`")
-st.write(f"- Intersep: `{intercept:.4f}`")
-st.write(f"- Koefisien Korelasi (r): `{r_value:.4f}`")
-st.write(f"- R-squared: `{r_squared:.4f}`")
+st.write(f"- Slope (ε·l): {slope:.4f}")
+st.write(f"- Intersep: {intercept:.4f}")
+st.write(f"- Koefisien Korelasi (r): {r_value:.4f}")
+st.write(f"- R-squared: {r_squared:.4f}")
 
 # Input sampel
 st.markdown("---")
@@ -65,8 +70,7 @@ num_samples = st.number_input("Jumlah sampel", min_value=1, max_value=10, value=
 
 sample_results = []
 st.markdown("#### Hasil Perhitungan Konsentrasi:")
-
-cols = st.columns(min(6, num_samples))  # Maks. 6 kolom per baris
+cols = st.columns(min(6, num_samples))
 
 for i in range(num_samples):
     with cols[i % 6]:
@@ -91,12 +95,9 @@ if sample_results:
         "Konsentrasi (ppm)": "%.3f"
     }), hide_index=True)
 
-    # =========================
-    # 🔸 %RPD (akurasi duplikat)
-    # =========================
+    # %RPD
     if num_samples >= 2 and num_samples % 2 == 0:
         st.markdown("#### 🎯 Evaluasi Akurasi (%RPD untuk Duplikat)")
-
         rpd_results = []
         rpd_values = []
         for i in range(0, num_samples, 2):
@@ -109,31 +110,37 @@ if sample_results:
                 "Pasangan": f"S{i+1} & S{i+2}",
                 "%RPD": rpd
             })
-
-        # Tampilkan semua hasil %RPD langsung
-        for r in rpd_results:
-            st.markdown(f"- Pasangan {r['Pasangan']}: **{r['%RPD']:.2f}%**")
-
+        rpd_df = pd.DataFrame(rpd_results)
+        st.dataframe(rpd_df.style.format({"%RPD": "%.2f"}), hide_index=True)
         avg_rpd = np.mean(rpd_values)
-        st.markdown(f"📌 *Nilai Akurasi (%RPD rata-rata): **{avg_rpd:.2f}%***")
+        st.markdown(f"📌 *Nilai Akurasi (%RPD rata-rata): {avg_rpd:.2f}%*")
 
-    # =========================
-    # 🔸 CV Horwitz (presisi)
-    # =========================
+    # CV Horwitz
     st.markdown("#### 📉 Evaluasi Presisi (CV Horwitz)")
-
+    horwitz_results = []
     horwitz_values = []
+
     for s in sample_results:
         ppm = s["Konsentrasi (ppm)"]
         C_decimal = ppm / 1_000_000
         if C_decimal > 0:
             cv_horwitz = 2 ** (1 - 0.5 * np.log10(C_decimal)) * 100
             horwitz_values.append(cv_horwitz)
-            st.markdown(f"- {s['Sampel']}: **{cv_horwitz:.2f}%**")
         else:
-            st.markdown(f"- {s['Sampel']}: **Tidak valid (konsentrasi 0)**")
+            cv_horwitz = np.nan
+        horwitz_results.append({
+            "Sampel": s["Sampel"],
+            "Konsentrasi (ppm)": ppm,
+            "CV Horwitz (%)": cv_horwitz
+        })
+
+    cv_df = pd.DataFrame(horwitz_results)
+    st.dataframe(cv_df.style.format({
+        "Konsentrasi (ppm)": "%.3f",
+        "CV Horwitz (%)": "%.2f"
+    }), hide_index=True)
 
     horwitz_values_clean = [v for v in horwitz_values if not np.isnan(v)]
     if horwitz_values_clean:
         avg_cv_horwitz = np.mean(horwitz_values_clean)
-        st.markdown(f"📌 *Rata-rata CV Horwitz: **{avg_cv_horwitz:.2f}%***")
+        st.markdown(f"📌 *Rata-rata CV Horwitz: {avg_cv_horwitz:.2f}%*")
