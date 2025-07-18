@@ -16,16 +16,21 @@ std_data = []
 for i in range(num_std):
     col1, col2 = st.columns(2)
     with col1:
-        conc = st.number_input(f"Konsentrasi {i+1} (ppm)", key=f"c{i}", format="%.4f")
+        conc = st.text_input(f"Konsentrasi {i+1} (ppm)", key=f"c{i}")
     with col2:
-        absb = st.number_input(f"Absorbansi {i+1}", key=f"a{i}", format="%.4f")
-    std_data.append((conc, absb))
+        absb = st.text_input(f"Absorbansi {i+1}", key=f"a{i}")
+    try:
+        conc = float(conc)
+        absb = float(absb)
+        std_data.append((conc, absb))
+    except:
+        pass
 
 df = pd.DataFrame(std_data, columns=["Konsentrasi", "Absorbansi"])
 
 # Validasi input
-if df["Konsentrasi"].isnull().any() or df["Absorbansi"].isnull().any():
-    st.warning("Isi semua nilai terlebih dahulu.")
+if df.shape[0] < num_std:
+    st.warning("Isi semua nilai terlebih dahulu dengan format angka yang benar.")
     st.stop()
 
 if df["Konsentrasi"].nunique() < 2:
@@ -36,7 +41,6 @@ if df["Konsentrasi"].nunique() < 2:
 slope, intercept, r_value, _, _ = linregress(df["Konsentrasi"], df["Absorbansi"])
 r_squared = r_value**2
 
-# Validasi slope
 if abs(slope) < 1e-6:
     st.error("Slope terlalu kecil. Data mungkin tidak cukup bervariasi atau tidak linier.")
     st.stop()
@@ -74,9 +78,11 @@ cols = st.columns(min(6, num_samples))
 
 for i in range(num_samples):
     with cols[i % 6]:
-        abs_val = st.number_input(
-            f"Absorbansi S{i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}"
-        )
+        abs_val_str = st.text_input(f"Absorbansi S{i+1}", key=f"s{i}")
+        try:
+            abs_val = float(abs_val_str)
+        except:
+            abs_val = 0.0
         conc_val = (abs_val - intercept) / slope if slope != 0 else 0
         conc_val = max(conc_val, 0)
         st.metric(label=f"Konsentrasi S{i+1}", value=f"{conc_val:.3f} ppm")
