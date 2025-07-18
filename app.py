@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
 st.set_page_config(page_title="Spektrofotometri Sederhana", layout="wide")
-
 st.title("📊 Analisis Spektrofotometri - Beer's Law")
 
 st.markdown("Masukkan minimal 3 data standar (konsentrasi dan absorbansi):")
@@ -76,7 +75,7 @@ cols = st.columns(min(6, num_samples))
 for i in range(num_samples):
     with cols[i % 6]:
         abs_val = st.number_input(
-            f"Absorbansi S{i+1}", format="%.4f", key=f"s{i}"
+            f"Absorbansi S{i+1}", min_value=0.0, max_value=3.0, format="%.4f", key=f"s{i}"
         )
         conc_val = (abs_val - intercept) / slope if slope != 0 else 0
         conc_val = max(conc_val, 0)
@@ -91,6 +90,25 @@ for i in range(num_samples):
 if sample_results:
     st.markdown("#### 📋 Tabel Hasil:")
     st.table(pd.DataFrame(sample_results))
+
+    # %RPD
+    if num_samples >= 2 and num_samples % 2 == 0:
+        st.markdown("#### 🎯 Evaluasi Akurasi (%RPD untuk Duplikat)")
+        rpd_results = []
+        rpd_values = []
+        for i in range(0, num_samples, 2):
+            c1 = float(sample_results[i]["Konsentrasi (ppm)"])
+            c2 = float(sample_results[i+1]["Konsentrasi (ppm)"])
+            avg = (c1 + c2) / 2
+            rpd = abs(c1 - c2) / avg * 100 if avg != 0 else 0
+            rpd_values.append(rpd)
+            rpd_results.append({
+                "Pasangan": f"S{i+1} & S{i+2}",
+                "%RPD": f"{rpd:.2f}"
+            })
+        st.table(pd.DataFrame(rpd_results))
+        avg_rpd = np.mean(rpd_values)
+        st.markdown(f"📌 Nilai Akurasi (%RPD rata-rata): {avg_rpd:.2f}%")
 
     # CV Horwitz
     st.markdown("#### 📉 Evaluasi Presisi (CV Horwitz)")
@@ -116,4 +134,4 @@ if sample_results:
     horwitz_values_clean = [v for v in horwitz_values if not np.isnan(v)]
     if horwitz_values_clean:
         avg_cv_horwitz = np.mean(horwitz_values_clean)
-        st.markdown(f"📌 *Rata-rata CV Horwitz: {avg_cv_horwitz:.2f}%*")
+        st.markdown(f"📌 Rata-rata CV Horwitz: {avg_cv_horwitz:.2f}%")
