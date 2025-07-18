@@ -97,25 +97,6 @@ if sample_results:
     st.markdown("#### 📋 Tabel Hasil:")
     st.table(pd.DataFrame(sample_results))
 
-    # %RPD
-    if num_samples >= 2 and num_samples % 2 == 0:
-        st.markdown("#### 🎯 Evaluasi Akurasi (%RPD untuk Duplikat)")
-        rpd_results = []
-        rpd_values = []
-        for i in range(0, num_samples, 2):
-            c1 = float(sample_results[i]["Konsentrasi (ppm)"])
-            c2 = float(sample_results[i+1]["Konsentrasi (ppm)"])
-            avg = (c1 + c2) / 2
-            rpd = abs(c1 - c2) / avg * 100 if avg != 0 else 0
-            rpd_values.append(rpd)
-            rpd_results.append({
-                "Pasangan": f"S{i+1} & S{i+2}",
-                "%RPD": f"{rpd:.2f}"
-            })
-        st.table(pd.DataFrame(rpd_results))
-        avg_rpd = np.mean(rpd_values)
-        st.markdown(f"📌 Nilai Akurasi (%RPD rata-rata): {avg_rpd:.2f}%")
-
     # CV Horwitz
     st.markdown("#### 📉 Evaluasi Presisi (CV Horwitz)")
     horwitz_results = []
